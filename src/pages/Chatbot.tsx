@@ -1,57 +1,43 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useToast } from "@/hooks/use-toast";
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ChatInterface from '@/components/ChatInterface';
 
 const Chatbot = () => {
-  const [isApiConnected, setIsApiConnected] = useState(false);
-  const [apiUrl, setApiUrl] = useState('');
+  const { toast } = useToast();
+  const [isBackendConnected, setIsBackendConnected] = useState(false);
   
   const handleSendMessage = async (message: string): Promise<string> => {
-    // If API is connected, send message to API
-    if (isApiConnected) {
-      try {
-        const response = await fetch(`${apiUrl}/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ question: message }),
-        });
-        
-        if (!response.ok) {
-          throw new Error('API request failed');
-        }
-        
-        const data = await response.json();
-        return data.response;
-      } catch (error) {
-        console.error('Error sending message to API:', error);
-        return "I'm sorry, there was an error processing your request. Please try again later.";
+    try {
+      // Send message to Flask backend API
+      const response = await fetch('/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ question: message }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Backend API request failed');
       }
-    }
-    
-    // Otherwise, use hardcoded responses
-    const lowercaseMessage = message.toLowerCase();
-    
-    if (lowercaseMessage.includes('hello') || lowercaseMessage.includes('hi')) {
-      return "Hello! I'm MindBloom, a mental health chatbot. How are you feeling today?";
-    } else if (lowercaseMessage.includes('how are you')) {
-      return "I'm just a chatbot, but I'm here and ready to help you! How can I assist with your mental health questions today?";
-    } else if (lowercaseMessage.includes('depression') || lowercaseMessage.includes('depressed')) {
-      return "Depression is a common but serious mood disorder. It causes severe symptoms that affect how you feel, think, and handle daily activities. If you're experiencing symptoms of depression, it's important to speak with a mental health professional. Would you like to learn about some coping strategies?";
-    } else if (lowercaseMessage.includes('anxiety') || lowercaseMessage.includes('anxious')) {
-      return "Anxiety is a normal response to stress, but when it becomes excessive, it can interfere with daily life. Techniques like deep breathing, meditation, and regular exercise can help manage anxiety symptoms. Would you like more information about anxiety management?";
-    } else if (lowercaseMessage.includes('stress')) {
-      return "Stress is your body's response to challenging situations. While some stress can be motivating, chronic stress can negatively impact your health. Managing stress through relaxation techniques, physical activity, and maintaining social connections is important for mental wellbeing.";
-    } else if (lowercaseMessage.includes('help') || lowercaseMessage.includes('crisis')) {
-      return "If you're in crisis or need immediate help, please contact a crisis helpline: National Suicide Prevention Lifeline: 988 or 1-800-273-TALK (8255), or text HOME to the Crisis Text Line: 741741. Remember, seeking help is a sign of strength.";
-    } else if (lowercaseMessage.includes('test') || lowercaseMessage.includes('dass') || lowercaseMessage.includes('assessment')) {
-      return "The DASS-21 (Depression, Anxiety, Stress Scale) is a self-assessment tool that measures depression, anxiety, and stress levels. It's not a diagnostic tool, but it can help you understand your mental health better. Would you like to take the assessment now?";
-    } else {
-      return "I'm sorry, I don't have specific information about that topic yet. As a mental health chatbot, I can provide general information about common mental health concerns like anxiety, depression, and stress management. Is there something specific you'd like to know about these topics?";
+      
+      const data = await response.json();
+      setIsBackendConnected(true);
+      return data.response;
+    } catch (error) {
+      console.error('Error sending message to backend API:', error);
+      setIsBackendConnected(false);
+      toast({
+        title: "Cannot connect to backend",
+        description: "Please ensure the Flask backend server is running",
+        variant: "destructive",
+      });
+      return "I'm unable to process your request at the moment. Please check if the backend server is running.";
     }
   };
   
@@ -59,6 +45,12 @@ const Chatbot = () => {
     {
       id: '1',
       text: "Hello! I'm MindBloom, your mental health chatbot. I'm here to answer your questions about mental health topics including depression, anxiety, stress, and self-care. How can I help you today?",
+      sender: 'bot' as const,
+      timestamp: new Date(),
+    },
+    {
+      id: '2',
+      text: "Please note that I require a connection to the Flask backend to function. Make sure the backend server is running before asking questions.",
       sender: 'bot' as const,
       timestamp: new Date(),
     },
@@ -98,31 +90,22 @@ const Chatbot = () => {
               it's not a substitute for professional help. If you're experiencing a mental health crisis or need immediate 
               assistance, please contact a mental health professional or crisis helpline.
             </p>
-            <p className="text-sm text-gray-500">
-              Note: This is a demo chatbot using predefined responses. Connect to your Flask API for more advanced interactions.
-            </p>
             
-            <div className="mt-6 border-t border-gray-200 pt-6">
-              <h4 className="font-quicksand font-medium text-md mb-3">Connect to API</h4>
-              <div className="flex gap-3 items-center">
-                <input
-                  type="text"
-                  className="flex-1 border rounded-md px-3 py-2 text-sm"
-                  placeholder="Enter API URL (e.g., http://localhost:5000)"
-                  value={apiUrl}
-                  onChange={(e) => setApiUrl(e.target.value)}
-                />
-                <Button 
-                  onClick={() => setIsApiConnected(!isApiConnected)}
-                  className={isApiConnected ? "bg-green-500 hover:bg-green-600" : "bg-mental-primary hover:bg-mental-secondary"}
-                >
-                  {isApiConnected ? "Disconnect" : "Connect"}
-                </Button>
-              </div>
-              <p className="mt-2 text-xs text-gray-500">
-                Status: {isApiConnected ? `Connected to ${apiUrl}` : "Using demo responses"}
+            <div className="mt-4 flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${isBackendConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <p className="text-sm text-gray-500">
+                Backend status: {isBackendConnected ? 'Connected' : 'Disconnected'}
               </p>
             </div>
+            
+            {!isBackendConnected && (
+              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <p className="text-sm text-amber-800">
+                  The backend Flask server doesn't appear to be running. Make sure the server is started 
+                  and try sending a message again.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

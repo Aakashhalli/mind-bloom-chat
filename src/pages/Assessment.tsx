@@ -244,7 +244,7 @@ const Assessment = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      setShowResult(true);
+      // Last question answered - don't automatically show results
     }
   };
 
@@ -281,8 +281,6 @@ const Assessment = () => {
     };
   };
 
-  const dass21Result = calculateDASS21();
-
   const interpretScore = (score: number, type: string) => {
     let severity = "";
     if (type === "depression") {
@@ -307,6 +305,8 @@ const Assessment = () => {
     return severity;
   };
 
+  const dass21Result = calculateDASS21();
+
   const depressionSeverity = interpretScore(dass21Result.depression, "depression");
   const anxietySeverity = interpretScore(dass21Result.anxiety, "anxiety");
   const stressSeverity = interpretScore(dass21Result.stress, "stress");
@@ -324,92 +324,120 @@ const Assessment = () => {
             DASS-21 Assessment
           </h1>
           <p className="text-gray-600 text-center mb-8">
-            Please read each statement and select the option that indicates how much the statement applied to you
-            over the past week.
+            {!showResult ? "Please read each statement and select the option that indicates how much the statement applied to you over the past week." : "Your DASS-21 Assessment Results"}
           </p>
 
-          <Card className="glass-card">
-            <CardContent className="p-8">
-              <Progress 
-                value={currentQuestionIndex / questions.length * 100} 
-                className="w-full h-2 bg-gray-200"
-              />
+          {!showResult ? (
+            <Card className="glass-card">
+              <CardContent className="p-8">
+                <Progress 
+                  value={currentQuestionIndex / questions.length * 100} 
+                  className="w-full h-2 bg-gray-200"
+                />
 
-              <div className="text-center mt-4">
-                Question {currentQuestionIndex + 1} of {questions.length}
-              </div>
-
-              <div className="mb-6 mt-8">
-                <h2 className="text-xl font-quicksand font-medium mb-3">{currentQuestion.text}</h2>
-                <div className="grid grid-cols-1 gap-4">
-                  {currentQuestion.options.map((option, index) => (
-                    <Button
-                      key={index}
-                      variant={answers[currentQuestionIndex] === index ? "primary" : "outline"}
-                      className="w-full"
-                      onClick={() => handleAnswer(index)}
-                    >
-                      {option}
-                    </Button>
-                  ))}
+                <div className="text-center mt-4">
+                  Question {currentQuestionIndex + 1} of {questions.length}
                 </div>
-              </div>
 
-              <div className="flex justify-between">
-                <Button
-                  variant="secondary"
-                  onClick={handlePrevious}
-                  disabled={currentQuestionIndex === 0}
-                >
-                  Previous
-                </Button>
-                {currentQuestionIndex === questions.length - 1 ? (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild disabled={!hasAnswered}>
-                      <Button variant={hasAnswered ? "primary" : "secondary"}>
-                        {hasAnswered ? "Get Results" : "Get Results"}
+                <div className="mb-6 mt-8">
+                  <h2 className="text-xl font-quicksand font-medium mb-3">{currentQuestion.text}</h2>
+                  <div className="grid grid-cols-1 gap-4">
+                    {currentQuestion.options.map((option, index) => (
+                      <Button
+                        key={index}
+                        variant={answers[currentQuestionIndex] === index ? "default" : "outline"}
+                        className="w-full"
+                        onClick={() => handleAnswer(index)}
+                      >
+                        {option}
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          You are about to submit the assessment. Make sure all questions are answered.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => setShowResult(true)}>Confirm</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                ) : (
-                  <Button
-                    onClick={handleNext}
-                    disabled={!hasAnswered}
-                  >
-                    Next
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                </div>
 
-          {showResult && (
-            <Card className="glass-card mt-12">
+                <div className="flex justify-between">
+                  <Button
+                    variant="secondary"
+                    onClick={handlePrevious}
+                    disabled={currentQuestionIndex === 0}
+                  >
+                    Previous
+                  </Button>
+                  {currentQuestionIndex === questions.length - 1 ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild disabled={!hasAnswered}>
+                        <Button variant={hasAnswered ? "default" : "secondary"} disabled={!hasAnswered}>
+                          Get Results
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            You are about to submit the assessment. Make sure all questions are answered.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => setShowResult(true)}>Confirm</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : (
+                    <Button
+                      onClick={handleNext}
+                      disabled={!hasAnswered}
+                    >
+                      Next
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="glass-card">
               <CardContent className="p-8">
                 <h2 className="text-2xl font-quicksand font-bold mb-6 text-center">Results</h2>
                 <div className="mb-4">
                   <p className="font-medium">Depression: <span className="font-normal">{dass21Result.depression}</span></p>
                   <p className="text-gray-600">Severity: {depressionSeverity}</p>
+                  <Progress 
+                    value={(dass21Result.depression / 42) * 100} 
+                    className="w-full h-2 bg-gray-200 mt-2"
+                  />
                 </div>
                 <div className="mb-4">
                   <p className="font-medium">Anxiety: <span className="font-normal">{dass21Result.anxiety}</span></p>
                   <p className="text-gray-600">Severity: {anxietySeverity}</p>
+                  <Progress 
+                    value={(dass21Result.anxiety / 42) * 100} 
+                    className="w-full h-2 bg-gray-200 mt-2"
+                  />
                 </div>
-                <div>
+                <div className="mb-6">
                   <p className="font-medium">Stress: <span className="font-normal">{dass21Result.stress}</span></p>
                   <p className="text-gray-600">Severity: {stressSeverity}</p>
+                  <Progress 
+                    value={(dass21Result.stress / 42) * 100} 
+                    className="w-full h-2 bg-gray-200 mt-2"
+                  />
+                </div>
+                
+                <div className="mt-8 border-t pt-6">
+                  <h3 className="text-lg font-medium mb-3">Recommendations</h3>
+                  <p className="mb-4">Based on your results, we recommend:</p>
+                  
+                  <ul className="list-disc pl-5 mb-4 space-y-1">
+                    <li>Consider speaking with a mental health professional</li>
+                    <li>Practice mindfulness and stress-reduction techniques</li>
+                    <li>Maintain a regular sleep schedule</li>
+                    <li>Exercise regularly</li>
+                  </ul>
+                  
+                  <p className="text-sm text-gray-500 mt-4">
+                    Note: This assessment is not a diagnostic tool. It's designed to help you understand your current mental health status.
+                    If you're experiencing significant distress, please consult with a healthcare provider.
+                  </p>
                 </div>
               </CardContent>
             </Card>
